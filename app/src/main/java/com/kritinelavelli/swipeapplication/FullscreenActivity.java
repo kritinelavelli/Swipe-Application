@@ -1,10 +1,12 @@
 package com.kritinelavelli.swipeapplication;
 
 import android.annotation.SuppressLint;
+import android.graphics.Color;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.DisplayMetrics;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -13,6 +15,9 @@ import android.widget.TextView;
 import java.security.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
+
+import static android.graphics.Color.argb;
+import static android.util.TypedValue.COMPLEX_UNIT_PX;
 
 /**
  * An example full-screen activity that shows and hides the system UI (i.e.
@@ -39,6 +44,7 @@ public class FullscreenActivity extends AppCompatActivity {
 
     private View mContentView;
     private View mControlsView;
+    private View mfullscreen;
     private boolean mVisible;
     private class coordinates {
         float x;
@@ -50,10 +56,14 @@ public class FullscreenActivity extends AppCompatActivity {
     }
     private class swipe{
         public Long t;
+        public coordinates start;
+        public int width;
+        public int height;
         public List<coordinates> c;
         public int user;
     }
     swipe s;
+    float size;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -63,23 +73,24 @@ public class FullscreenActivity extends AppCompatActivity {
         mVisible = true;
         mControlsView = findViewById(R.id.fullscreen_content_controls);
         mContentView = findViewById(R.id.fullscreen_content);
+        mfullscreen = findViewById(R.id.fullscreen);
         ActionBar actionBar = getSupportActionBar();
         if (actionBar != null) {
             actionBar.hide();
         }
         mControlsView.setVisibility(View.GONE);
-        mControlsView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LOW_PROFILE
+
+        mfullscreen.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LOW_PROFILE
                 | View.SYSTEM_UI_FLAG_FULLSCREEN
                 | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
                 | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
                 | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
                 | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
-        mContentView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LOW_PROFILE
-                | View.SYSTEM_UI_FLAG_FULLSCREEN
-                | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
+//        mControlsView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LOW_PROFILE
+//                | View.SYSTEM_UI_FLAG_FULLSCREEN
+//                | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+//                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+//                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
 
         // Set up the user interaction to manually show or hide the system UI.
         mContentView.setOnTouchListener(myOnTouchListener());
@@ -88,8 +99,15 @@ public class FullscreenActivity extends AppCompatActivity {
         // operations to prevent the jarring behavior of controls going away
         // while interacting with the UI.
         //findViewById(R.id.dummy_button).setOnTouchListener(mDelayHideTouchListener);
+
         s = new swipe();
         s.c = new ArrayList<coordinates>();
+        DisplayMetrics displayMetrics = new DisplayMetrics();
+        getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+        s.height = displayMetrics.heightPixels;
+        s.width = displayMetrics.widthPixels;
+        TextView v = ((TextView)findViewById(R.id.text));
+        size = v.getTextSize();
     }
     private View.OnTouchListener myOnTouchListener() {
         return new View.OnTouchListener() {
@@ -102,18 +120,29 @@ public class FullscreenActivity extends AppCompatActivity {
                 switch (event.getAction() & MotionEvent.ACTION_MASK) {
                     case MotionEvent.ACTION_DOWN:
                         s.t = System.currentTimeMillis()/1000;
-                        s.c.add(new coordinates(x,y));
+                        s.start = new coordinates(x,y);
+//                        s.c.add(new coordinates(x,y));
                         break;
                     case MotionEvent.ACTION_MOVE:
                         s.c.add(new coordinates(x,y));
                         break;
+                    case MotionEvent.ACTION_CANCEL:
                     case MotionEvent.ACTION_UP:
-                        view.setVisibility(View.GONE);
-                        mControlsView.setVisibility(View.VISIBLE);
+                        if (y <= s.start.y) {
+                            view.setVisibility(View.GONE);
+                            mControlsView.setVisibility(View.VISIBLE);
+                        }
                         return true;
                 }
-                TextView v = ((TextView)view);
-                v.setText(""+x);
+                TextView v = ((TextView)findViewById(R.id.text));
+                float m = 3/(4*s.start.y);
+                float newsize = size*m*(y+(1/3));
+                if (y <= s.start.y) {
+                    v.setTextSize(COMPLEX_UNIT_PX, newsize);
+                    v.setAlpha(1f*m*(y+(1/3)));
+                }
+
+                v.setText(""+size*y/s.start.y);
                 return true;
             }
         };
