@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "771651669254",
+    "firebase_url": "https://android-practice-65db7.firebaseio.com",
+    "project_id": "android-practice-65db7",
+    "storage_bucket": "android-practice-65db7.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:771651669254:android:adea83a5e38a4f9f",
+        "android_client_info": {
+          "package_name": "com.kritinelavelli.swipeapplication"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "771651669254-er3a6a2djc30576qp2cgsr3vj6bb7f19.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.kritinelavelli.swipeapplication",
+            "certificate_hash": "5c737554305cc977147e2c6677edb71fa78d4abe"
+          }
+        },
+        {
+          "client_id": "771651669254-c8o3o9ku3hv4diodvvc48rvvf4ctnddd.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDyoYS9cTt2Bm7J_8n7J2JhCmC2kz4pcao"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "771651669254-c8o3o9ku3hv4diodvvc48rvvf4ctnddd.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -7,10 +7,18 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.IgnoreExtraProperties;
+import com.google.firebase.database.ValueEventListener;
 
 import java.security.Timestamp;
 import java.util.ArrayList;
@@ -46,30 +54,51 @@ public class FullscreenActivity extends AppCompatActivity {
     private View mControlsView;
     private View mfullscreen;
     private boolean mVisible;
-    private class coordinates {
-        float x;
-        float y;
-        public coordinates (float a, float b) {
+    @IgnoreExtraProperties
+    public static class point {
+        public float x;
+        public float y;
+        public float pressure, orientation, size, touchMajor, touchMinor;
+        public point () {
+
+        }
+        public point (float a, float b, float pres, float orien, float si, float major, float minor) {
             x = a;
             y = b;
+            pressure = pres;
+            orientation = orien;
+            size = si;
+            touchMajor = major;
+            touchMinor = minor;
         }
     }
-    private class swipe{
-        public Long t;
-        public coordinates start;
+    private static class swipe{
+        public Long startTime;
+        public point start;
         public int width;
         public int height;
-        public List<coordinates> c;
-        public int user;
+        public float xdpi;
+        public List<point> coordinates;
+        public String hand;
+        public swipe() {
+            // Default constructor required for calls to DataSnapshot.getValue(User.class)
+        }
     }
     swipe s;
-    float size;
+    float textSize;
+    FirebaseDatabase database;
+    DatabaseReference myRef;
+    int uniqueID;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_fullscreen);
+        // Write a message to the database
 
+        database = FirebaseDatabase.getInstance();
+        myRef = database.getReference();
         mVisible = true;
         mControlsView = findViewById(R.id.fullscreen_content_controls);
         mContentView = findViewById(R.id.fullscreen_content);
@@ -99,15 +128,18 @@ public class FullscreenActivity extends AppCompatActivity {
         // operations to prevent the jarring behavior of controls going away
         // while interacting with the UI.
         //findViewById(R.id.dummy_button).setOnTouchListener(mDelayHideTouchListener);
-
+        myRef.child("uniqueID").addListenerForSingleValueEvent(postListener);
         s = new swipe();
-        s.c = new ArrayList<coordinates>();
+        s.coordinates = new ArrayList<point>();
         DisplayMetrics displayMetrics = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
         s.height = displayMetrics.heightPixels;
         s.width = displayMetrics.widthPixels;
+        s.xdpi = displayMetrics.xdpi;
         TextView v = ((TextView)findViewById(R.id.text));
-        size = v.getTextSize();
+        textSize = v.getTextSize();
+
+
     }
     private View.OnTouchListener myOnTouchListener() {
         return new View.OnTouchListener() {
@@ -115,37 +147,89 @@ public class FullscreenActivity extends AppCompatActivity {
             @SuppressLint("ClickableViewAccessibility")
             @Override
             public boolean onTouch(View view, MotionEvent event) {
-                float x = event.getX();
-                float y = event.getY();
+                float x = event.getRawX();
+                float y = event.getRawY();
+                float pressure = event.getPressure();
+                float orientation = event.getOrientation();
+                float siz = event.getSize();
+                float touchMajor = event.getTouchMajor();
+                float touchMinor = event.getTouchMinor();
                 switch (event.getAction() & MotionEvent.ACTION_MASK) {
                     case MotionEvent.ACTION_DOWN:
-                        s.t = System.currentTimeMillis()/1000;
-                        s.start = new coordinates(x,y);
+                        s.startTime = System.currentTimeMillis()/1000;
+                        s.start = new point(x,y, pressure, orientation, siz, touchMajor, touchMinor);
 //                        s.c.add(new coordinates(x,y));
                         break;
                     case MotionEvent.ACTION_MOVE:
-                        s.c.add(new coordinates(x,y));
+                        s.coordinates.add(new point(x,y, pressure, orientation, siz, touchMajor, touchMinor));
                         break;
                     case MotionEvent.ACTION_CANCEL:
                     case MotionEvent.ACTION_UP:
+                        s.coordinates.add(new point(x,y, pressure, orientation, siz, touchMajor, touchMinor));
                         if (y <= s.start.y) {
+                            view.animate().alpha(0.0f).setDuration(2000);
                             view.setVisibility(View.GONE);
                             mControlsView.setVisibility(View.VISIBLE);
                         }
                         return true;
                 }
                 TextView v = ((TextView)findViewById(R.id.text));
-                float m = 3/(4*s.start.y);
-                float newsize = size*m*(y+(1/3));
+                float m = 3/(6*s.start.y);
+                float newsize = textSize*m*(y+(1/3));
                 if (y <= s.start.y) {
                     v.setTextSize(COMPLEX_UNIT_PX, newsize);
                     v.setAlpha(1f*m*(y+(1/3)));
                 }
 
-                v.setText(""+size*y/s.start.y);
+                //v.setText(""+textSize*y/s.start.y);
                 return true;
             }
         };
+    }
+    ValueEventListener postListener = new ValueEventListener() {
+        @Override
+        public void onDataChange(DataSnapshot dataSnapshot) {
+            // Get Post object and use the values to update the UI
+            uniqueID = dataSnapshot.getValue(int.class);
+            myRef.child("uniqueID").setValue(uniqueID+1);
+            // ...
+        }
+
+        @Override
+        public void onCancelled(DatabaseError databaseError) {
+            // Getting Post failed, log a message
+            //Log.w("loadPost:onCancelled", databaseError.toException());
+            // ...
+        }
+    };
+
+    public void rightClicked(View view) {
+
+        s.hand = "rightThumb";
+        //String k = myRef.child("uniqueID").toString();
+        myRef.child("_"+uniqueID).setValue(s);
+        this.finish();
+    }
+    public void leftClicked(View view) {
+
+        s.hand = "leftThumb";
+        //String k = myRef.child("uniqueID").toString();
+        myRef.child("_"+uniqueID).setValue(s);
+        this.finish();
+    }
+    public void rightIndexClicked(View view) {
+
+        s.hand = "rightIndex";
+        //String k = myRef.child("uniqueID").toString();
+        myRef.child("_"+uniqueID).setValue(s);
+        this.finish();
+    }
+    public void leftIndexClicked(View view) {
+
+        s.hand = "leftIndex";
+        //String k = myRef.child("uniqueID").toString();
+        myRef.child("_"+uniqueID).setValue(s);
+        this.finish();
     }
     @Override
     protected void onPostCreate(Bundle savedInstanceState) {
